@@ -18,6 +18,8 @@ defmodule ColocatedDemoWeb.CoreComponents do
   use Gettext, backend: ColocatedDemoWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Phoenix.LiveView.ColocatedHook
+  alias ColocatedDemoWeb.ColocatedCSS
 
   @doc """
   Renders a modal.
@@ -672,5 +674,112 @@ defmodule ColocatedDemoWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc false
+  def comp_with_hook(assigns) do
+    ~H"""
+    <div id="hey" phx-hook="foo">
+      <span>hello</span>
+      <!-- comment -->
+    </div>
+
+    <script :extract={ColocatedHook.new("foo")}>
+      export default {
+        mounted() {
+          this.el.firstElementChild.textContent = "Hello from JS!"
+        }
+      }
+    </script>
+    """
+  end
+
+  def comp_with_runtime_hook(assigns) do
+    ~H"""
+    <div id="hey2" phx-hook="foo">
+      <span>hello</span>
+      <!-- comment -->
+    </div>
+
+    <script :extract={ColocatedHook.new("foo", bundle_mode: :runtime)} nonce={@nonce}>
+      return {
+        mounted() {
+          this.el.firstElementChild.textContent = "Hello from JS (runtime)!"
+        }
+      }
+    </script>
+    """
+  end
+
+  def comp_with_colocated_css(assigns) do
+    ~H"""
+    <style :extract={%ColocatedCSS{}}>
+      h1 {
+        color: red;
+      }
+    </style>
+
+    <h1>Hello!</h1>
+    """
+  end
+
+  def other_comp_with_colocated_css(assigns) do
+    ~H"""
+    <style :extract={%ColocatedCSS{}}>
+      h1 {
+        color: blue;
+      }
+    </style>
+
+    <div>
+      <h1>Hello!</h1>
+    </div>
+    """
+  end
+
+  def comp_with_colocated_web_component(assigns) do
+    ~H"""
+    <script :extract={%{file: "time-ago.js"}}>
+      class TimeAgo extends HTMLElement {
+        constructor(){
+          super()
+          this.attachShadow({mode: "open"})
+        }
+
+        connectedCallback(){
+          let updateInterval = parseInt(this.getAttribute("every") || "10000")
+          this.dateTime = this.getAttribute("at")
+          this.render()
+          this.interval = setInterval(() => this.render(), updateInterval)
+        }
+
+        disconnectedCallback(){ clearInterval(this.interval) }
+
+        render(){
+          this.shadowRoot.innerHTML = this.timeToText(new Date(this.dateTime), new Date())
+        }
+
+        timeToText(past, now) {
+          let seconds = Math.round((now - past) / 1000)
+          let minutes = Math.round(seconds / 60)
+          let hours = Math.round(minutes / 60)
+          let days = Math.round(hours / 24)
+          let months = Math.round(days / 30)
+          let years = Math.round(months / 12)
+
+          if(seconds < 60){ return `${seconds} seconds ago` }
+          else if (minutes < 60){ return `${minutes} minutes ago` }
+          else if (hours < 24){ return `${hours} hours ago` }
+          else if (days < 30){ return `${days} days ago` }
+          else if (months < 12){ return `${months} months ago` }
+          else return `${years} years ago`
+        }
+      }
+
+      customElements.define("time-ago", TimeAgo)
+    </script>
+
+    <time-ago at={DateTime.utc_now() |> DateTime.add(:rand.uniform(87400 * 7) * -1, :second)} />
+    """
   end
 end

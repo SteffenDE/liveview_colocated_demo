@@ -8,6 +8,25 @@ defmodule ColocatedDemoWeb.Router do
     plug :put_root_layout, html: {ColocatedDemoWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_csp
+  end
+
+  def put_csp(conn, _opts) do
+    script_nonce = nonce()
+
+    conn
+    |> assign(:script_csp_nonce, script_nonce)
+    |> put_session(:script_csp_nonce, script_nonce)
+    |> put_resp_header(
+      "content-security-policy",
+      "default-src; script-src 'self' 'nonce-#{script_nonce}'; style-src-elem 'self' https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css 'unsafe-inline'; " <>
+        "img-src data: 'self'; font-src data: ; connect-src 'self'; frame-src 'self' ; " <>
+        "style-src 'self' 'unsafe-inline';"
+    )
+  end
+
+  defp nonce do
+    16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
   end
 
   pipeline :api do
@@ -18,6 +37,7 @@ defmodule ColocatedDemoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/demo", Demo, :index
   end
 
   # Other scopes may use custom stacks.
@@ -37,7 +57,18 @@ defmodule ColocatedDemoWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: ColocatedDemoWeb.Telemetry
+      live_dashboard "/dashboard",
+        metrics: ColocatedDemoWeb.Telemetry,
+        additional_pages: [
+          terminal: ColocatedDemoWeb.LiveDashboard.TerminalPage
+        ],
+        on_mount: [
+          ColocatedDemoWeb.LiveDashboard.Hooks
+        ],
+        csp_nonce_assign_key: %{
+          script: :script_csp_nonce
+        }
+
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end

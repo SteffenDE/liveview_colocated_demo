@@ -35,3 +35,5 @@ colocated_demo-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/assets/css/colocated/*.css
+/assets/js/hooks/*.js

@@ -22,6 +22,7 @@ config :colocated_demo, ColocatedDemoWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],
   check_origin: false,
   code_reloader: true,
+  reloadable_compilers: [:gettext, :elixir, :app, :phoenix_live_view],
   debug_errors: true,
   secret_key_base: "r6KOXS38g2CpC7aR6Tn5/UOukZE9NuHkERF0jz8JbwB3NyFmeDnJc8M4ZyUmKfp1",
   watchers: [
