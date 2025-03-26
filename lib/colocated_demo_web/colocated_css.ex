@@ -3,6 +3,8 @@ defmodule ColocatedDemoWeb.ColocatedCSS do
 end
 
 defimpl Phoenix.LiveView.TagExtractor, for: ColocatedDemoWeb.ColocatedCSS do
+  alias Phoenix.LiveView.TagExtractorUtils
+
   def extract(_data, _attributes, text_content, meta) do
     %{file: file, line: line, column: column} = meta
 
@@ -42,23 +44,9 @@ defimpl Phoenix.LiveView.TagExtractor, for: ColocatedDemoWeb.ColocatedCSS do
   end
 
   def postprocess_tokens(_data, %{hashed_name: hashed_name}, tokens) do
-    Enum.map(tokens, fn
-      {:tag, name, attrs, meta} ->
-        {:tag, name, add_data_attr(hashed_name, attrs), meta}
-
-      {:local_component, name, attrs, meta} ->
-        {:local_component, name, add_data_attr(hashed_name, attrs), meta}
-
-      {:remote_component, name, attrs, meta} ->
-        {:remote_component, name, add_data_attr(hashed_name, attrs), meta}
-
-      other ->
-        other
+    TagExtractorUtils.map_tokens(tokens, fn token ->
+      TagExtractorUtils.set_attribute(token, "data-phx-css", hashed_name)
     end)
-  end
-
-  defp add_data_attr(hashed_name, attrs) do
-    [Phoenix.LiveView.TagExtractorUtils.attribute("data-phx-css", hashed_name) | attrs]
   end
 
   def prune(_data, %{hashed_name: hashed_name}) do
